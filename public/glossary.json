@@ -1,0 +1,8 @@
+{
+    "UiPath Studio": "The desktop application used to design automation workflows.",
+    "Orchestrator": "A web-based platform to manage, monitor, and deploy automations.",
+    "Automation Hub": "A tool for collecting and prioritizing automation ideas.",
+    "Robot": "An execution agent that runs automation workflows.",
+    "Attended Automation": "Automation triggered and supervised by a human user."
+  }
+  

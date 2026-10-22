@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KALCHEV</title>
+  <link rel="stylesheet" href="src/styles.css">
+  <link rel="stylesheet" href="src/detectionLog.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"
+    referrerpolicy="no-referrer" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <!-- Secret Admin Panel -->
+  <div id="secret-key-btn" title="???">🗝️</div>
+
+  <div id="secret-modal" class="secret-modal hidden">
+    <div class="secret-content">
+      <span class="close-secret">&times;</span>
+      <h2>ADMIN ACCESS</h2>
+      <div id="secret-login">
+        <input type="password" id="secret-passcode" placeholder="Enter Passcode" maxlength="6">
+        <button id="secret-submit">UNLOCK</button>
+        <div id="secret-error" class="hidden">ACCESS DENIED</div>
+      </div>
+      <div id="secret-panel" class="hidden">
+        <h3>WELCOME CREATOR</h3>
+
+        <!-- Camera Monitor Panel -->
+        <div class="camera-section">
+          <div class="monitor-frame">
+            <div class="monitor-header">
+              <span class="device-name" id="display-device-name">LIVE CAMERA MONITOR</span>
+              <span class="device-status">SIGNAL <span class="blink-dot">●</span></span>
+            </div>
+            <div class="monitor-body">
+              <div class="video-container">
+                <div class="rec-overlay">REC</div>
+                <div class="timestamp-overlay" id="cam-timestamp">--:--:--</div>
+                <div id="video-placeholder">
+                  <div class="signal-bars">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                  </div>
+                  <p>WAITING FOR STREAM...</p>
+                </div>
+                <video id="camera-stream" playsinline autoplay muted controls class="hidden"></video>
+                <canvas id="detection-canvas" class="hidden"></canvas>
+                <div id="ai-status" class="ai-status hidden">AI: TRACKING ACTIVE</div>
+              </div>
+
+              <div class="ai-sidebar">
+                <div class="sidebar-header">AI ANALYSIS</div>
+                <div id="object-counters" class="object-counters">
+                  <div class="counter-item">👤 PERSON <span id="count-person">0</span></div>
+                  <div class="counter-item">🚗 CAR <span id="count-car">0</span></div>
+                  <div class="counter-item">🐱 CAT <span id="count-cat">0</span></div>
+                  <div class="counter-item">🐶 DOG <span id="count-dog">0</span></div>
+                </div>
+                <button id="btn-load-ai" class="ai-action-btn">ACTIVATE AI ENGINE</button>
+                <button id="btn-show-history-sidebar" class="ai-action-btn sidebar-secondary">VIEW HISTORY</button>
+                <div class="ai-meta">EfficientDet-Lite0 (MediaPipe)</div>
+              </div>
+
+
+              <div id="ai-debug-terminal" class="ai-debug-terminal">
+                <div class="debug-line">> AI SYSTEM DIAGNOSTICS READY.</div>
+              </div>
+
+              <div class="detection-log-panel">
+                <div class="log-header">
+                  <span>🔍 LIVE DETECTION LOG</span>
+                  <button id="btn-clear-log" class="clear-log-btn">CLEAR</button>
+                </div>
+                <div class="detection-log-table">
+                  <table id="detection-log">
+                    <thead>
+                      <tr>
+                        <th>TIME</th>
+                        <th>OBJECT</th>
+                        <th>CONF%</th>
+                        <th>COLOR</th>
+                      </tr>
+                    </thead>
+                    <tbody id="detection-log-body">
+                      <tr class="empty-state">
+                        <td colspan="4">No detections yet...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="monitor-controls">
+              <div class="input-group">
+                <input type="text" id="stream-url" placeholder="Paste RTSP, HLS or m3u8 URL...">
+                <div id="camera-brand-info" class="brand-helper">
+                  Tip: For Reolink, enable HLS in camera settings and use http://IP:8000/hls/ch0.m3u8
+                </div>
+                <div class="secret-inputs hidden">
+                  <input type="text" id="cam-access-id" placeholder="Access ID">
+                  <input type="text" id="cam-access-secret" placeholder="Access Secret">
+                </div>
+              </div>
+              <div class="action-buttons">
+                <button id="btn-connect-cam">PLAY STREAM</button>
+                <button id="btn-generate-url" class="outline-btn">TUYA CLOUD SYNC</button>
+              </div>
+            </div>
+            <div class="telemetry-terminal" id="cam-terminal">
+              <div class="term-line">> SYSTEM READY.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-controls">
+          <div class="admin-btns-row">
+            <button class="admin-btn">Purge Cache</button>
+            <button class="admin-btn">Force Reload</button>
+          </div>
+
+          <div id="history-section" class="history-section hidden">
+            <h3>DETECTION LOGS (DATABASE)</h3>
+            <div class="history-table-container">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Object</th>
+                    <th>Confidence</th>
+                  </tr>
+                </thead>
+                <tbody id="history-tbody">
+                  <!-- Logs will appear here -->
+                  <tr>
+                    <td colspan="3" style="text-align:center; opacity:0.5;">No records found.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="history-actions">
+              <button id="btn-refresh-history" class="outline-btn">REFRESH DATA</button>
+              <button id="id-export-excel" class="admin-btn excel-btn">DOWNLOAD EXCEL REPORT</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+
+</html>

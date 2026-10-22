@@ -1,0 +1,15 @@
+FROM ollama/ollama
+
+# Install curl for healthchecks if needed
+RUN apt-get update && apt-get install -y curl
+
+# Pull the model during build (Note: This makes the image large, ~4GB)
+# For Cloud Run, you might prefer to pull at runtime or use a persistent volume,
+# but for a simple "one-click" deploy, build-time pull is easier.
+RUN ollama serve & sleep 10 && ollama pull llama3
+
+# Expose Ollama port
+EXPOSE 11434
+
+# Ensure the server starts
+ENTRYPOINT ["ollama", "serve"]

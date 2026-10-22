@@ -1,0 +1,32 @@
+// src/data/locations/regions.js
+
+module.exports = [
+    { id: 'sofia-city', name: 'София-град' },
+    { id: 'sofia-province', name: 'Софийска област' },
+    { id: 'varna', name: 'Варна' },
+    { id: 'burgas', name: 'Бургас' },
+    { id: 'plovdiv', name: 'Пловдив' },
+    { id: 'ruse', name: 'Русе' },
+    { id: 'stara-zagora', name: 'Стара Загора' },
+    { id: 'blagoevgrad', name: 'Благоевград' },
+    { id: 'veliko-tarnovo', name: 'Велико Търново' },
+    { id: 'haskovo', name: 'Хасково' },
+    { id: 'pleven', name: 'Плевен' },
+    { id: 'sliven', name: 'Сливен' },
+    { id: 'dobrich', name: 'Добрич' },
+    { id: 'shumen', name: 'Шумен' },
+    { id: 'pernik', name: 'Перник' },
+    { id: 'yambol', name: 'Ямбол' },
+    { id: 'pazardzhik', name: 'Пазарджик' },
+    { id: 'vratsa', name: 'Враца' },
+    { id: 'gabrovo', name: 'Габрово' },
+    { id: 'targovishte', name: 'Търговище' },
+    { id: 'lovech', name: 'Ловеч' },
+    { id: 'silistra', name: 'Силистра' },
+    { id: 'razgrad', name: 'Разград' },
+    { id: 'smolyan', name: 'Смолян' },
+    { id: 'kyustendil', name: 'Кюстендил' },
+    { id: 'montana', name: 'Монтана' },
+    { id: 'vidin', name: 'Видин' },
+    { id: 'kardzhali', name: 'Кърджали' }
+];

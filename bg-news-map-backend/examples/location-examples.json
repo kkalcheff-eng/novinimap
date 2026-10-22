@@ -1,0 +1,45 @@
+[
+    {
+        "description": "Exact Cyrillic match in title",
+        "input": {
+            "title": "Нови проекти в София",
+            "summary": "Столицата планира нови метростанции."
+        },
+        "expected": {
+            "location": "sofia",
+            "minConfidence": 0.9
+        }
+    },
+    {
+        "description": "Keyword match (морската столица)",
+        "input": {
+            "title": "Фестивал край морето",
+            "summary": "Морската столица посреща хиляди гости."
+        },
+        "expected": {
+            "location": "varna",
+            "minConfidence": 0.7
+        }
+    },
+    {
+        "description": "Common variant (Варне)",
+        "input": {
+            "title": "Събития във Варне",
+            "summary": "Градът се подготвя за лятото."
+        },
+        "expected": {
+            "location": "varna",
+            "minConfidence": 0.6
+        }
+    },
+    {
+        "description": "Ambiguous context",
+        "input": {
+            "title": "Времето в страната",
+            "summary": "Очаква се слънчево време във всички градове."
+        },
+        "expected": {
+            "locationsCount": 0
+        }
+    }
+]

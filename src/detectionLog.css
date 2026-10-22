@@ -1,0 +1,109 @@
+/* Detection Log Panel Styles */
+.detection-log-panel {
+    background: #050505;
+    border: 1px solid #222;
+    border-top: 2px solid var(--accent-color);
+    margin-top: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 300px;
+}
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #0a0a0a;
+    border-bottom: 1px solid #222;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+.clear-log-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    padding: 4px 10px;
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: var(--font-main);
+}
+
+.clear-log-btn:hover {
+    border-color: var(--error-color);
+    color: var(--error-color);
+    background: rgba(255, 62, 62, 0.1);
+}
+
+.detection-log-table {
+    overflow-y: auto;
+    flex: 1;
+}
+
+#detection-log {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+}
+
+#detection-log thead {
+    position: sticky;
+    top: 0;
+    background: #0a0a0a;
+    z-index: 10;
+}
+
+#detection-log th {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 0.65rem;
+}
+
+#detection-log td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #1a1a1a;
+    color: #ccc;
+}
+
+#detection-log tbody tr:hover {
+    background: #0f0f0f;
+}
+
+#detection-log .empty-state td {
+    text-align: center;
+    color: #555;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Color badge in log */
+.color-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid rgba(0, 255, 65, 0.3);
+    font-size: 0.65rem;
+}
+
+/* Highlight recent detections */
+@keyframes flash-row {
+    0% {
+        background: rgba(0, 255, 65, 0.2);
+    }
+
+    100% {
+        background: transparent;
+    }
+}
+
+.detection-row-new {
+    animation: flash-row 0.5s ease-out;
+}
