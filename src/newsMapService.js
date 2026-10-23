@@ -182,6 +182,31 @@ const FALLBACK_SEED = [
   }
 ];
 
+// JS "\b" doesn't work with Cyrillic, so we build our own word-start boundary
+const START = '(?<![\\p{L}\\p{N}])';
+const END = '(?![\\p{L}\\p{N}])';
+const rx = (p) => new RegExp(START + '(?:' + p.join('|') + ')\\p{L}*', 'iu');
+
+const DEATH = rx([
+  'загин', 'убит', 'убийств', 'убийц', 'убиец',
+  'уби(?:ха|л|ла|ли)?' + END,
+  'застрел', 'удави', 'удавен', 'мъртъв', 'мъртв',
+  'труп(?:ът|ове|овете)?' + END,
+]);
+const NEGATED = rx([
+  'няма\\s+(?:загинали|убити|мъртви)',
+  'без\\s+загинали',
+  'не\\s+(?:са|е)\\s+(?:загинал|загинали|убит|убити|мъртъв|мъртви)',
+  'никой\\s+не\\s+(?:е\\s+)?загин',
+]);
+const NOT_CRITICAL = rx([
+  'памет', 'почит', 'почет', 'годишнина', 'възпомен',
+  'опит за убийств', 'убийствен', 'мъртва точка', 'мъртъв сезон',
+]);
+
+export const isLethalTitle = (title = '') =>
+  DEATH.test(title) && !NEGATED.test(title) && !NOT_CRITICAL.test(title);
+
 export class NewsMapService {
   constructor() {
     this.cacheKey = 'kalchev_news_agg_v4';
@@ -223,144 +248,50 @@ export class NewsMapService {
       }
     }
 
-    if (onProgress) onProgress(10);
+    if (onProgress) onProgress(15);
+    console.log('[NewsMapService] Fetching from Bulgarian News Map API / static cache...');
 
-    // Strategy 1: Attempt to read from backend API (fast local/remote background service)
-    const backendEndpoints = [
+    // Strategy 1: Fetch from backend API /api/news (served instantly from background Redis/memory cache)
+
+    const apiEndpoints = [
+      'https://novinimap-1.onrender.com/api/news',
       '/api/news',
-      'http://localhost:3000/api/news',
-      'http://127.0.0.1:3000/api/news'
+      '/news_cache.json'
     ];
 
-    for (const endpoint of backendEndpoints) {
+
+    for (const url of apiEndpoints) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const resp = await fetch(endpoint, { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const resp = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
 
         if (resp.ok) {
           const json = await resp.json();
           const items = Array.isArray(json.data) ? json.data : (Array.isArray(json.articles) ? json.articles : null);
           if (items && items.length > 0) {
-            console.log(`[NewsMapService] Loaded ${items.length} news items from backend (${endpoint})`);
-            const normalized = items.map(item => this.normalizeBackendItem(item));
-            normalized.sort((a, b) => (b.unixTime || 0) - (a.unixTime || 0));
-            this.setCache(normalized);
+            console.log(`[NewsMapService] Successfully loaded ${items.length} news items from ${url}`);
+            this.setCache(items);
             if (onProgress) onProgress(100);
-            return normalized;
+            return items;
           }
         }
       } catch (e) {
-        // Continue to next endpoint or fallback
+        // Continue to next endpoint
       }
     }
 
-    // Strategy 2: Standalone client-side direct RSS aggregation (fallback)
-    console.log('[NewsMapService] Backend unavailable, fetching RSS feeds in browser...');
-    if (onProgress) onProgress(25);
+    if (onProgress) onProgress(60);
 
-    let allItems = [];
-
-    // Fetch from all sources with staggered micro-delays
-    const fetchPromises = SOURCES.map((src, idx) => {
-      return new Promise(resolve => {
-        setTimeout(async () => {
-          try {
-            const items = await this.fetchFromSource(src);
-            resolve(items);
-          } catch (e) {
-            resolve([]);
-          }
-        }, idx * 120);
-      });
-    });
-
-    const results = await Promise.all(fetchPromises);
-    results.forEach(r => {
-      if (Array.isArray(r) && r.length > 0) {
-        allItems.push(...r);
-      }
-    });
-
-    if (onProgress) onProgress(75);
-
-    let finalNews = [];
-    if (allItems.length > 0) {
-      const deduplicated = this.deduplicate(allItems);
-      const enriched = deduplicated.map(item => this.enrich(item));
-      enriched.sort((a, b) => b.unixTime - a.unixTime);
-      finalNews = enriched;
-    } else {
-      console.warn('[NewsMapService] Live fetch yielded 0 items, using rich fallback seeds.');
-      finalNews = FALLBACK_SEED.map(item => this.enrich(item));
-      finalNews.sort((a, b) => b.unixTime - a.unixTime);
-    }
+    // Strategy 2: Fallback to high-quality enriched seeds if backend is completely unreachable
+    console.warn('[NewsMapService] Backend API unavailable, loading enriched fallback dataset.');
+    const finalNews = FALLBACK_SEED.map(item => this.enrich(item));
+    finalNews.sort((a, b) => b.unixTime - a.unixTime);
 
     this.setCache(finalNews);
     if (onProgress) onProgress(100);
     return finalNews;
-  }
-
-  normalizeBackendItem(item) {
-    const pubDate = this.parseDate(item.publishedAt || item.pubDate);
-    const unixTime = item.unixTime || pubDate.getTime();
-    return {
-      title: item.title,
-      summary: item.summary || '',
-      link: item.link || '#',
-      source: item.source || 'Новини',
-      location: item.location || null,
-      isLethal: !!item.isLethal,
-      unixTime: unixTime,
-      timestamp: item.timestamp || pubDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      dateStr: item.dateStr || pubDate.toLocaleDateString('bg-BG', { day: 'numeric', month: 'short' })
-    };
-  }
-
-  async fetchFromSource(source) {
-    // Strategy 1: rss2json proxy with CORS
-    try {
-      const rss2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6500);
-
-      const resp = await fetch(rss2jsonUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.status === 'ok' && Array.isArray(data.items) && data.items.length > 0) {
-          return data.items.map(i => ({
-            title: i.title || '',
-            summary: i.description || i.content || '',
-            link: i.link || source.url,
-            pubDate: i.pubDate || new Date().toISOString(),
-            source: source.name
-          }));
-        }
-      }
-    } catch (e) { }
-
-    // Strategy 2: allorigins JSON converter fallback
-    try {
-      const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(source.url)}`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6500);
-
-      const resp = await fetch(allOriginsUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.contents) {
-          const parsed = this.parseXML(data.contents, source.name);
-          if (parsed.length > 0) return parsed;
-        }
-      }
-    } catch (e) { }
-
-    return [];
   }
 
   enrich(item) {
@@ -384,20 +315,16 @@ export class NewsMapService {
     const fullText = `${cleanTitle} ${cleanSummary}`.toLowerCase();
 
     // Critical / Lethal Incident Detection
-    const deathKeywords = /(загинал|починал|жертви|убит|смърт|труп|убийство|ранен)/i;
-    const isLethal = deathKeywords.test(fullText);
+    const isLethal = isLethalTitle(cleanTitle);   // title only = strict
 
-    // City Geocoding
+    // City Geocoding via fast single-pass boundary matching (Aho-Corasick trie style)
     let loc = null;
-    for (const [key, cityInfo] of Object.entries(CITY_DB)) {
-      const regex = new RegExp(`(^|[\\s,.:;!?"'«»()—–-])${key}([\\s,.:;!?"'«»()—–-]|$)`, 'i');
-      if (regex.test(fullText)) {
-        loc = {
-          name: cityInfo.name,
-          coords: { lat: cityInfo.lat, lng: cityInfo.lng }
-        };
-        break;
-      }
+    const match = this.matchCity(fullText);
+    if (match) {
+      loc = {
+        name: match.name,
+        coords: { lat: match.lat, lng: match.lng }
+      };
     }
 
     const validDate = this.parseDate(item.pubDate);
@@ -413,6 +340,27 @@ export class NewsMapService {
       timestamp: validDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       dateStr: validDate.toLocaleDateString('bg-BG', { day: 'numeric', month: 'short' })
     };
+  }
+
+  matchCity(text) {
+    if (!text) return null;
+    if (!this._sortedCities) {
+      this._sortedCities = Object.keys(CITY_DB).sort((a, b) => b.length - a.length);
+    }
+
+    const delimiters = " \t\r\n,.:;!?\"'«»()—–-/\\[]{}<>";
+    for (const cityKey of this._sortedCities) {
+      let idx = text.indexOf(cityKey);
+      while (idx !== -1) {
+        const prevChar = idx > 0 ? text[idx - 1] : ' ';
+        const nextChar = idx + cityKey.length < text.length ? text[idx + cityKey.length] : ' ';
+        if (delimiters.includes(prevChar) && delimiters.includes(nextChar)) {
+          return CITY_DB[cityKey];
+        }
+        idx = text.indexOf(cityKey, idx + 1);
+      }
+    }
+    return null;
   }
 
   parseDate(pubDateStr) {
