@@ -263,7 +263,7 @@ export class NewsMapService {
     for (const url of apiEndpoints) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
         const resp = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
 
