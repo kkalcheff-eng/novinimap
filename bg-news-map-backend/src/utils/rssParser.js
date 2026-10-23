@@ -84,7 +84,20 @@ class RSSParser {
       item.content ||
       ''
     );
-    const cleanSummary = this.cleanHtml(rawDesc).split(' http')[0].trim();
+    let cleanSummary = this.cleanHtml(rawDesc).split(' http')[0].trim();
+
+    // Google News: publisher is in <source>; strip the " - Publisher" title suffix
+    const publisher = this.cleanHtml(this.extractText(item.source));
+    let title = cleanTitle;
+    if (publisher && title.endsWith(` - ${publisher}`)) {
+      title = title.slice(0, -(publisher.length + 3)).trim();
+    }
+
+    // Drop Google's title+publisher description so a name like "Варна Утре" can't fake a city match
+    if (publisher) {
+      const rest = cleanSummary.split(cleanTitle).join('').split(title).join('').split(publisher).join('').trim();
+      if (rest.length < 20) cleanSummary = '';
+    }
 
     // Link
     let link = '';
@@ -114,13 +127,14 @@ class RSSParser {
     const dateObj = this.parseDate(rawDate);
 
     return {
-      title: cleanTitle,
+      title: title,
       summary: cleanSummary,
       link: link || '#',
       guid: guid || link || cleanTitle,
       pubDate: dateObj.toISOString(),
       unixTime: dateObj.getTime(),
-      source: sourceName
+      source: sourceName,
+      publisher: publisher || ''
     };
   }
 

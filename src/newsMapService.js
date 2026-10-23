@@ -224,7 +224,41 @@ export class NewsMapService {
     }
 
     if (onProgress) onProgress(10);
-    console.log('[NewsMapService] Fetching all Bulgarian feeds in parallel...');
+
+    // Strategy 1: Attempt to read from backend API (fast local/remote background service)
+    const backendEndpoints = [
+      '/api/news',
+      'http://localhost:3000/api/news',
+      'http://127.0.0.1:3000/api/news'
+    ];
+
+    for (const endpoint of backendEndpoints) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const resp = await fetch(endpoint, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (resp.ok) {
+          const json = await resp.json();
+          const items = Array.isArray(json.data) ? json.data : (Array.isArray(json.articles) ? json.articles : null);
+          if (items && items.length > 0) {
+            console.log(`[NewsMapService] Loaded ${items.length} news items from backend (${endpoint})`);
+            const normalized = items.map(item => this.normalizeBackendItem(item));
+            normalized.sort((a, b) => (b.unixTime || 0) - (a.unixTime || 0));
+            this.setCache(normalized);
+            if (onProgress) onProgress(100);
+            return normalized;
+          }
+        }
+      } catch (e) {
+        // Continue to next endpoint or fallback
+      }
+    }
+
+    // Strategy 2: Standalone client-side direct RSS aggregation (fallback)
+    console.log('[NewsMapService] Backend unavailable, fetching RSS feeds in browser...');
+    if (onProgress) onProgress(25);
 
     let allItems = [];
 
@@ -266,6 +300,22 @@ export class NewsMapService {
     this.setCache(finalNews);
     if (onProgress) onProgress(100);
     return finalNews;
+  }
+
+  normalizeBackendItem(item) {
+    const pubDate = this.parseDate(item.publishedAt || item.pubDate);
+    const unixTime = item.unixTime || pubDate.getTime();
+    return {
+      title: item.title,
+      summary: item.summary || '',
+      link: item.link || '#',
+      source: item.source || 'Новини',
+      location: item.location || null,
+      isLethal: !!item.isLethal,
+      unixTime: unixTime,
+      timestamp: item.timestamp || pubDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStr: item.dateStr || pubDate.toLocaleDateString('bg-BG', { day: 'numeric', month: 'short' })
+    };
   }
 
   async fetchFromSource(source) {

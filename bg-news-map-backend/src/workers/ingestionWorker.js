@@ -8,6 +8,9 @@ const AhoCorasick = require('../utils/ahoCorasick');
 const cache = require('../utils/cache');
 const logger = require('../utils/logger');
 
+// Google News search feed for one city, last 24h, Bulgarian edition
+const gnCity = (city) => `https://news.google.com/rss/search?q=${encodeURIComponent(city + ' when:1d')}&hl=bg&gl=BG&ceid=BG:bg`;
+
 const DEFAULT_SOURCES = [
   { id: 'dnevnik', name: 'Дневник', url: 'https://www.dnevnik.bg/rss/' },
   { id: 'mediapool', name: 'Mediapool', url: 'https://www.mediapool.bg/rss/' },
@@ -20,7 +23,14 @@ const DEFAULT_SOURCES = [
   { id: 'burgasnews', name: 'Бургас Новини', url: 'https://burgasnews.com/feed/' },
   { id: 'stzagora', name: 'Стара Загора Нет', url: 'https://stzagora.net/feed/' },
   { id: 'newsbg', name: 'News.bg', url: 'https://news.bg/rss' },
-  { id: 'dnesbg', name: 'Dir.bg Dnes', url: 'https://dnes.dir.bg/rss' }
+  { id: 'dnesbg', name: 'Dir.bg Dnes', url: 'https://dnes.dir.bg/rss' },
+  // Google News (keep LAST so direct publisher feeds win de-duplication)
+  { id: 'gn-top', name: 'Google News', url: 'https://news.google.com/rss?hl=bg&gl=BG&ceid=BG:bg' },
+  { id: 'gn-sofia', name: 'Google News', url: gnCity('София'), geoHint: 'софия' },
+  { id: 'gn-plovdiv', name: 'Google News', url: gnCity('Пловдив'), geoHint: 'пловдив' },
+  { id: 'gn-varna', name: 'Google News', url: gnCity('Варна'), geoHint: 'варна' },
+  { id: 'gn-burgas', name: 'Google News', url: gnCity('Бургас'), geoHint: 'бургас' },
+  { id: 'gn-ruse', name: 'Google News', url: gnCity('Русе'), geoHint: 'русе' }
 ];
 
 // 50+ Bulgarian Cities & Municipalities with Coordinates
@@ -273,7 +283,8 @@ class IngestionWorker {
           summary: item.summary,
           link: link,
           guid: item.guid || link,
-          source: source.name,
+          source: item.publisher || source.name,
+          geoHint: source.geoHint || null,
           sourceId: source.id,
           publishedAt: item.pubDate,
           fetchedAt: fetchedAt,
@@ -324,6 +335,12 @@ class IngestionWorker {
         name: best.name,
         coords: { lat: best.lat, lng: best.lng }
       };
+    }
+
+    // 2b. Google News city feed: if the text had no city, fall back to the feed's city
+    if (!loc && item.geoHint && CITY_DB[item.geoHint]) {
+      const c = CITY_DB[item.geoHint];
+      loc = { name: c.name, coords: { lat: c.lat, lng: c.lng } };
     }
 
     // 3. Cache geolocation result for this article (persisted for 14 days)
