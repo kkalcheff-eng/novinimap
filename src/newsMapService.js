@@ -209,8 +209,8 @@ export const isLethalTitle = (title = '') =>
 
 export class NewsMapService {
   constructor() {
-    this.cacheKey = 'kalchev_news_agg_v4';
-    this.ttl = 15 * 60 * 1000; // 15 mins
+    this.cacheKey = 'kalchev_news_agg_v5';
+    this.ttl = 5 * 60 * 1000; // 5 mins
   }
 
   getCache() {
