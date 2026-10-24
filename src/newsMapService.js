@@ -211,8 +211,22 @@ export const isLethalTitle = (title = '') =>
 
 export class NewsMapService {
   constructor() {
-    this.cacheKey = 'kalchev_news_agg_v5';
+    // Use a new key so old, stale v4/v5 data cannot be reused.
+    this.cacheKey = 'kalchev_news_agg_v6';
     this.ttl = 5 * 60 * 1000;
+
+    // Remove obsolete cache entries automatically.
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem('kalchev_news_agg_v4');
+        localStorage.removeItem('kalchev_news_agg_v5');
+      }
+    } catch (error) {
+      console.warn(
+        '[NewsMapService] Could not clear old cache:',
+        error
+      );
+    }
   }
 
   getCache() {
@@ -221,7 +235,8 @@ export class NewsMapService {
         const stored = localStorage.getItem(this.cacheKey);
 
         if (stored) {
-          const { data, timestamp } = JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          const { data, timestamp } = parsed;
 
           if (
             Date.now() - timestamp < this.ttl &&
@@ -233,7 +248,10 @@ export class NewsMapService {
         }
       }
     } catch (error) {
-      console.warn('[NewsMapService] Could not read cache:', error);
+      console.warn(
+        '[NewsMapService] Could not read cache:',
+        error
+      );
     }
 
     return null;
@@ -241,7 +259,12 @@ export class NewsMapService {
 
   setCache(data) {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (
+        typeof window !== 'undefined' &&
+        window.localStorage &&
+        Array.isArray(data) &&
+        data.length > 0
+      ) {
         localStorage.setItem(
           this.cacheKey,
           JSON.stringify({
@@ -251,7 +274,10 @@ export class NewsMapService {
         );
       }
     } catch (error) {
-      console.warn('[NewsMapService] Could not save cache:', error);
+      console.warn(
+        '[NewsMapService] Could not save cache:',
+        error
+      );
     }
   }
 
