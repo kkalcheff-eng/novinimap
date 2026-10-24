@@ -2,7 +2,7 @@
 
 /**
  * KALCHEV CLICK - CORE NEWS ENGINE (v4.5 - HIGH CAPACITY & CLUSTERING)
- * Aggregates 100+ Bulgarian news feeds with location geocoding, cluster grouping, and incident detection.
+ * Aggregates Bulgarian news feeds with location geocoding, cluster grouping, and incident detection.
  */
 
 const SOURCES = [
@@ -18,7 +18,7 @@ const SOURCES = [
   { id: 'stzagora', name: 'Стара Загора Нет', url: 'https://stzagora.net/feed/' }
 ];
 
-// Master Database: 50+ Bulgarian Cities & Municipalities with Coordinates
+// Bulgarian cities and coordinates
 export const CITY_DB = {
   'софия': { lat: 42.6977, lng: 23.3219, name: 'София' },
   'пловдив': { lat: 42.1354, lng: 24.7453, name: 'Пловдив' },
@@ -73,7 +73,7 @@ export const CITY_DB = {
   'козлодуй': { lat: 43.7833, lng: 23.7333, name: 'Козлодуй' }
 };
 
-// Comprehensive Bulgarian seed dataset covering major regions
+// Fallback seed dataset, used only if the backend and cache are unavailable
 const FALLBACK_SEED = [
   {
     title: 'Дневник: Столичният общински съвет прие мащабен план за рехабилитация на булеварди в София',
@@ -93,7 +93,7 @@ const FALLBACK_SEED = [
     title: 'Варна Утре: Рекорден брой кораби и круизни пътници очакват на морска гара във Варна',
     summary: 'Морската столица посреща новия сезон с обновена крайбрежна алея и инфраструктура.',
     link: 'https://varnautre.bg',
-    source: 'Варна Утре',
+    source: 'https://varnautre.bg',
     pubDate: new Date(Date.now() - 3600000).toISOString()
   },
   {
@@ -114,7 +114,7 @@ const FALLBACK_SEED = [
     title: 'Стара Загора Нет: Модернизация на водоснабдителната мрежа стартира в Стара Загора',
     summary: 'Ремонтните дейности ще подобрят налягането и качеството на питейната вода в три квартала.',
     link: 'https://stzagora.net',
-    source: 'Стара Загора Нет',
+    source: 'Стара Загора',
     pubDate: new Date(Date.now() - 9000000).toISOString()
   },
   {
@@ -135,7 +135,7 @@ const FALLBACK_SEED = [
     title: 'Economic.bg: Туристически бум в Банско и Смолян за предстоящите почивни дни',
     summary: 'Хотелиерите в курортите отчитат над 90% заетост на базата за планински и уикенд туризъм.',
     link: 'https://www.economic.bg',
-    source: 'Economic.bg',
+    source: 'https://www.economic.bg',
     pubDate: new Date(Date.now() - 14400000).toISOString()
   },
   {
@@ -149,7 +149,7 @@ const FALLBACK_SEED = [
     title: 'Дневник: В София откриват международен фестивал за дигитално изкуство и иновации',
     summary: 'Събитието събира водещи артисти и програмисти от цяла Европа в центъра на града.',
     link: 'https://www.dnevnik.bg',
-    source: 'Дневник',
+    source: 'https://www.dnevnik.bg',
     pubDate: new Date(Date.now() - 18000000).toISOString()
   },
   {
@@ -163,14 +163,14 @@ const FALLBACK_SEED = [
     title: 'Варна Утре: Ремонт на Аспарухов мост във Варна ще подобри безопасността на съоръжението',
     summary: 'Инженерните екипи работят по подмяна на фуги и ново асфалтово покритие.',
     link: 'https://varnautre.bg',
-    source: 'Варна Утре',
+    source: 'varnautre',
     pubDate: new Date(Date.now() - 21600000).toISOString()
   },
   {
     title: '24 Часа: Пожар в сухи треви край Хасково беше локализиран бързо от огнеборците',
     summary: 'Няма пострадали хора и материални щети по близките сгради благодарение на бързата реакция.',
     link: 'https://www.24chasa.bg',
-    source: '24 Часа',
+    source: 'https://www.24chasa.bg',
     pubDate: new Date(Date.now() - 23400000).toISOString()
   },
   {
@@ -182,7 +182,7 @@ const FALLBACK_SEED = [
   }
 ];
 
-// JS "\b" doesn't work with Cyrillic, so we build our own word-start boundary
+// Word boundaries for Cyrillic text
 const START = '(?<![\\p{L}\\p{N}])';
 const END = '(?![\\p{L}\\p{N}])';
 const rx = (p) => new RegExp(START + '(?:' + p.join('|') + ')\\p{L}*', 'iu');
@@ -191,17 +191,19 @@ const DEATH = rx([
   'загин', 'убит', 'убийств', 'убийц', 'убиец',
   'уби(?:ха|л|ла|ли)?' + END,
   'застрел', 'удави', 'удавен', 'мъртъв', 'мъртв',
-  'труп(?:ът|ове|овете)?' + END,
+  'труп(?:ът|ове|овете)?' + END
 ]);
+
 const NEGATED = rx([
   'няма\\s+(?:загинали|убити|мъртви)',
   'без\\s+загинали',
   'не\\s+(?:са|е)\\s+(?:загинал|загинали|убит|убити|мъртъв|мъртви)',
-  'никой\\s+не\\s+(?:е\\s+)?загин',
+  'никой\\s+не\\s+(?:е\\s+)?загин'
 ]);
+
 const NOT_CRITICAL = rx([
   'памет', 'почит', 'почет', 'годишнина', 'възпомен',
-  'опит за убийств', 'убийствен', 'мъртва точка', 'мъртъв сезон',
+  'опит за убийств', 'убийствен', 'мъртва точка', 'мъртъв сезон'
 ]);
 
 export const isLethalTitle = (title = '') =>
@@ -210,88 +212,132 @@ export const isLethalTitle = (title = '') =>
 export class NewsMapService {
   constructor() {
     this.cacheKey = 'kalchev_news_agg_v5';
-    this.ttl = 5 * 60 * 1000; // 5 mins
+    this.ttl = 5 * 60 * 1000;
   }
 
   getCache() {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const stored = localStorage.getItem(this.cacheKey);
+
         if (stored) {
           const { data, timestamp } = JSON.parse(stored);
-          if (Date.now() - timestamp < this.ttl && Array.isArray(data) && data.length > 0) {
+
+          if (
+            Date.now() - timestamp < this.ttl &&
+            Array.isArray(data) &&
+            data.length > 0
+          ) {
             return data;
           }
         }
       }
-    } catch (e) { }
+    } catch (error) {
+      console.warn('[NewsMapService] Could not read cache:', error);
+    }
+
     return null;
   }
 
   setCache(data) {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(this.cacheKey, JSON.stringify({
-          data,
-          timestamp: Date.now()
-        }));
+        localStorage.setItem(
+          this.cacheKey,
+          JSON.stringify({
+            data,
+            timestamp: Date.now()
+          })
+        );
       }
-    } catch (e) { }
+    } catch (error) {
+      console.warn('[NewsMapService] Could not save cache:', error);
+    }
   }
 
   async fetchTrendingNews(force = false, onProgress = null) {
-    if (!force) {
-      const cached = this.getCache();
-      if (cached && cached.length >= 10) {
-        if (onProgress) onProgress(100);
-        return cached;
-      }
-    }
-
     if (onProgress) onProgress(15);
-    console.log('[NewsMapService] Fetching from Bulgarian News Map API / static cache...');
 
-    // Strategy 1: Fetch from backend API /api/news (served instantly from background Redis/memory cache)
+    console.log('[NewsMapService] Fetching fresh news from live backend...');
 
-    const apiEndpoints = [
-      'https://novinimap-1.onrender.com/api/news',
-      '/api/news',
-      '/news_cache.json'
-    ];
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
+      let response;
 
-    for (const url of apiEndpoints) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-        const resp = await fetch(url, { signal: controller.signal });
+        response = await fetch(
+          `https://novinimap-1.onrender.com/api/news?check=${Date.now()}`,
+          {
+            signal: controller.signal,
+            cache: 'no-store'
+          }
+        );
+      } finally {
         clearTimeout(timeoutId);
+      }
 
-        if (resp.ok) {
-          const json = await resp.json();
-          const items = Array.isArray(json.data) ? json.data : (Array.isArray(json.articles) ? json.articles : null);
-          if (items && items.length > 0) {
-            console.log(`[NewsMapService] Successfully loaded ${items.length} news items from ${url}`);
-            this.setCache(items);
-            if (onProgress) onProgress(100);
-            return items;
+      if (!response.ok) {
+        throw new Error(`Backend returned HTTP ${response.status}`);
+      }
+
+      const json = await response.json();
+
+      const items = Array.isArray(json.data)
+        ? json.data
+        : Array.isArray(json.articles)
+          ? json.articles
+          : null;
+
+      if (!items || items.length === 0) {
+        throw new Error('Backend returned no news articles');
+      }
+
+      console.log(
+        `[NewsMapService] Loaded ${items.length} items from live backend`
+      );
+
+      this.setCache(items);
+
+      if (onProgress) onProgress(100);
+      return items;
+    } catch (error) {
+      console.warn(
+        '[NewsMapService] Live backend unavailable; checking cached news.',
+        error
+      );
+
+      // Use cached data only if the live backend is unavailable.
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const stored = localStorage.getItem(this.cacheKey);
+
+          if (stored) {
+            const parsed = JSON.parse(stored);
+
+            if (Array.isArray(parsed.data) && parsed.data.length > 0) {
+              console.warn(
+                '[NewsMapService] Showing cached news; it may be outdated.'
+              );
+
+              if (onProgress) onProgress(100);
+              return parsed.data;
+            }
           }
         }
-      } catch (e) {
-        // Continue to next endpoint
+      } catch (cacheError) {
+        console.warn(
+          '[NewsMapService] Could not read cached news.',
+          cacheError
+        );
       }
+
+      console.error('[NewsMapService] No live or cached news available.');
+
+      if (onProgress) onProgress(100);
+      return [];
     }
-
-    if (onProgress) onProgress(60);
-
-    // Strategy 2: Fallback to high-quality enriched seeds if backend is completely unreachable
-    console.warn('[NewsMapService] Backend API unavailable, loading enriched fallback dataset.');
-    const finalNews = FALLBACK_SEED.map(item => this.enrich(item));
-    finalNews.sort((a, b) => b.unixTime - a.unixTime);
-
-    this.setCache(finalNews);
-    if (onProgress) onProgress(100);
-    return finalNews;
   }
 
   enrich(item) {
@@ -313,104 +359,141 @@ export class NewsMapService {
       .trim();
 
     const fullText = `${cleanTitle} ${cleanSummary}`.toLowerCase();
+    const isLethal = isLethalTitle(cleanTitle);
 
-    // Critical / Lethal Incident Detection
-    const isLethal = isLethalTitle(cleanTitle);   // title only = strict
-
-    // City Geocoding via fast single-pass boundary matching (Aho-Corasick trie style)
-    let loc = null;
+    let location = null;
     const match = this.matchCity(fullText);
+
     if (match) {
-      loc = {
+      location = {
         name: match.name,
         coords: { lat: match.lat, lng: match.lng }
       };
     }
 
-    const validDate = this.parseDate(item.pubDate);
+    const validDate = this.parseDate(
+      item.pubDate || item.publishedAt || item.unixTime
+    );
 
     return {
+      ...item,
       title: cleanTitle,
       summary: cleanSummary,
       link: item.link || '#',
       source: item.source || 'Новини',
-      location: loc,
-      isLethal: isLethal,
+      location,
+      isLethal,
       unixTime: validDate.getTime(),
-      timestamp: validDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      dateStr: validDate.toLocaleDateString('bg-BG', { day: 'numeric', month: 'short' })
+      timestamp: validDate.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      dateStr: validDate.toLocaleDateString('bg-BG', {
+        day: 'numeric',
+        month: 'short'
+      })
     };
   }
 
   matchCity(text) {
     if (!text) return null;
+
     if (!this._sortedCities) {
-      this._sortedCities = Object.keys(CITY_DB).sort((a, b) => b.length - a.length);
+      this._sortedCities = Object.keys(CITY_DB).sort(
+        (a, b) => b.length - a.length
+      );
     }
 
     const delimiters = " \t\r\n,.:;!?\"'«»()—–-/\\[]{}<>";
+
     for (const cityKey of this._sortedCities) {
-      let idx = text.indexOf(cityKey);
-      while (idx !== -1) {
-        const prevChar = idx > 0 ? text[idx - 1] : ' ';
-        const nextChar = idx + cityKey.length < text.length ? text[idx + cityKey.length] : ' ';
-        if (delimiters.includes(prevChar) && delimiters.includes(nextChar)) {
+      let index = text.indexOf(cityKey);
+
+      while (index !== -1) {
+        const previousChar = index > 0 ? text[index - 1] : ' ';
+        const nextIndex = index + cityKey.length;
+        const nextChar = nextIndex < text.length ? text[nextIndex] : ' ';
+
+        if (
+          delimiters.includes(previousChar) &&
+          delimiters.includes(nextChar)
+        ) {
           return CITY_DB[cityKey];
         }
-        idx = text.indexOf(cityKey, idx + 1);
+
+        index = text.indexOf(cityKey, index + 1);
       }
     }
+
     return null;
   }
 
-  parseDate(pubDateStr) {
-    if (!pubDateStr) return new Date();
-    let str = String(pubDateStr).trim();
-    // If format is 'YYYY-MM-DD HH:MM:SS', rss2json returns UTC timestamps
-    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
-      str = str.replace(' ', 'T') + 'Z';
+  parseDate(dateString) {
+    if (!dateString) return new Date();
+
+    let value = String(dateString).trim();
+
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
+      value = value.replace(' ', 'T') + 'Z';
     }
-    const d = new Date(str);
-    return isNaN(d.getTime()) ? new Date() : d;
+
+    // Backend may supply unixTime in seconds or milliseconds.
+    if (/^\d{10}$/.test(value)) {
+      value = Number(value) * 1000;
+    } else if (/^\d{13}$/.test(value)) {
+      value = Number(value);
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? new Date() : date;
   }
 
   parseXML(xml, sourceName) {
     if (!xml || typeof xml !== 'string') return [];
+
     try {
-      const doc = new DOMParser().parseFromString(xml, 'text/xml');
-      const items = Array.from(doc.querySelectorAll('item')).map(i => ({
-        title: i.querySelector('title')?.textContent || '',
-        summary: i.querySelector('description')?.textContent || '',
-        pubDate: i.querySelector('pubDate')?.textContent || new Date().toISOString(),
-        link: i.querySelector('link')?.textContent || '#',
+      const document = new DOMParser().parseFromString(xml, 'text/xml');
+
+      return Array.from(document.querySelectorAll('item')).map((item) => ({
+        title: item.querySelector('title')?.textContent || '',
+        summary: item.querySelector('description')?.textContent || '',
+        pubDate:
+          item.querySelector('pubDate')?.textContent ||
+          new Date().toISOString(),
+        link: item.querySelector('link')?.textContent || '#',
         source: sourceName
       }));
-      return items;
-    } catch (e) {
+    } catch (error) {
+      console.warn('[NewsMapService] Could not parse XML:', error);
       return [];
     }
   }
 
   deduplicate(items) {
     const seen = new Set();
-    return items.filter(i => {
-      const normalized = (i.title || '').toLowerCase().replace(/[^a-zа-я0-9]/gi, '').substring(0, 40);
+
+    return items.filter((item) => {
+      const normalized = (item.title || '')
+        .toLowerCase()
+        .replace(/[^a-zа-я0-9]/gi, '')
+        .substring(0, 40);
+
       if (!normalized || seen.has(normalized)) return false;
+
       seen.add(normalized);
       return true;
     });
   }
 
-  /**
-   * Group articles by location name for map clustering
-   */
   getCityClusters(items) {
     const clusters = {};
+
     if (!Array.isArray(items)) return clusters;
 
-    items.forEach(item => {
+    items.forEach((item) => {
       if (item.location && item.location.name) {
         const cityName = item.location.name;
+
         if (!clusters[cityName]) {
           clusters[cityName] = {
             name: cityName,
@@ -420,8 +503,10 @@ export class NewsMapService {
             count: 0
           };
         }
+
         clusters[cityName].articles.push(item);
         clusters[cityName].count++;
+
         if (item.isLethal) {
           clusters[cityName].hasLethal = true;
         }
