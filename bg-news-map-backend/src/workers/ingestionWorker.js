@@ -147,6 +147,7 @@ const CITY_DB = {
   'бяла черква': { lat: 43.2500, lng: 25.3333, name: 'Бяла Черква' },
   'дебелец': { lat: 43.0333, lng: 25.6000, name: 'Дебелец' },
   'килифарево': { lat: 43.0000, lng: 25.6333, name: 'Килифарево' },
+  'гривица': { lat: 43.4145, lng: 24.7055, name: 'Гривица' },
   // ===== Община Аврен =====
   'аврен': { lat: 43.1127, lng: 27.6672, name: 'Аврен' },
   'бенковски': { lat: 43.1177, lng: 27.7844, name: 'Бенковски' },
@@ -640,7 +641,7 @@ class IngestionWorker {
       }
       const health = await cache.get('kalchev:news:health');
       if (health) this.sourcesHealth = health;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   async saveToSharedCache(articles, clusters) {
@@ -648,7 +649,7 @@ class IngestionWorker {
       await cache.set('kalchev:news:articles', articles, 1800);
       await cache.set('kalchev:news:clusters', clusters, 1800);
       await cache.set('kalchev:news:health', this.sourcesHealth, 1800);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   saveStaticCache(articles, clusters) {
@@ -673,7 +674,7 @@ class IngestionWorker {
         if (fs.existsSync(dir)) {
           fs.writeFileSync(target, payload, 'utf8');
         }
-      } catch (e) {}
+      } catch (e) { }
     });
   }
 
@@ -684,7 +685,7 @@ class IngestionWorker {
   startScheduler(intervalMinutes = 3) {
     const intervalMs = Math.max(1, intervalMinutes) * 60 * 1000;
     console.log(`[IngestionWorker] Initializing background scheduler (every ${intervalMinutes} min)...`);
-    
+
     // Immediate initial background run
     this.runIngestionCycle().catch(err => {
       console.warn('[IngestionWorker] Initial background run error:', err.message);
