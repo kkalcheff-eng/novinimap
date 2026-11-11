@@ -107,6 +107,10 @@ class RSSParser {
       link = item.link['@_href'] || item.link['#text'] || '';
     } else if (item['atom:link'] && item['atom:link']['@_href']) {
       link = item['atom:link']['@_href'];
+    } else if (typeof item.url === 'string') {
+      link = item.url;
+    } else if (item.url && typeof item.url === 'object') {
+      link = item.url['#text'] || '';
     }
 
     // GUID / ID

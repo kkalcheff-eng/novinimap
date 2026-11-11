@@ -19,7 +19,7 @@ const DEFAULT_SOURCES = [
   { id: 'economic', name: 'Economic.bg', url: 'https://www.economic.bg/bg/rss.xml' },
   { id: 'banker', name: 'Банкеръ', url: 'https://banker.bg/feed/' },
   { id: 'podtepeto', name: 'Под Тепето (Пловдив)', url: 'https://podtepeto.com/feed/' },
-  { id: 'varnautre', name: 'Варна Утре', url: 'https://varnautre.bg/feed/' },
+  { id: 'varnautre', name: 'Варна Утре', url: 'https://varnautre.bg/feed/rss.xml' },
   { id: 'burgasnews', name: 'Бургас Новини', url: 'https://burgasnews.com/feed/' },
   { id: 'stzagora', name: 'Стара Загора Нет', url: 'https://stzagora.net/feed/' },
   { id: 'newsbg', name: 'News.bg', url: 'https://news.bg/rss' },
@@ -534,10 +534,14 @@ class IngestionWorker {
    * Enriches an article with location using Aho-Corasick & Article-level Geolocation Cache
    */
   async enrich(item, fetchedAt) {
-    const articleKey = (item.link || item.guid || item.id).toLowerCase();
+    const rawKey = (item.link && item.link !== '#' && !item.link.startsWith('#'))
+      ? item.link
+      : ((item.guid && item.guid !== '#' && !item.guid.startsWith('#')) ? item.guid : (item.id || item.title));
+    const articleKey = (rawKey || '').trim().toLowerCase();
+    const canCache = Boolean(articleKey && articleKey !== '#');
 
     // 1. Check article geolocation cache (keyed by link or GUID)
-    const cachedGeo = await cache.getArticleGeo(articleKey);
+    const cachedGeo = canCache ? await cache.getArticleGeo(articleKey) : null;
     if (cachedGeo) {
       const pubDate = new Date(item.publishedAt);
       const existing = this.articlesStore.get(item.id);
@@ -577,7 +581,9 @@ class IngestionWorker {
     }
 
     // 3. Cache geolocation result for this article (persisted for 14 days)
-    await cache.setArticleGeo(articleKey, { location: loc, isLethal });
+    if (canCache) {
+      await cache.setArticleGeo(articleKey, { location: loc, isLethal });
+    }
 
     const pubDate = new Date(item.publishedAt);
     const existing = this.articlesStore.get(item.id);
