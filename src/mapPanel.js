@@ -14,12 +14,13 @@ export async function initMapPanel(container) {
   container.innerHTML = `
     <div class="map-panel-header">
       <div class="header-left">
-        <h2>КАРТА НА НОВИНИТЕ: БЪЛГАРИЯ</h2>
         <span class="live-counter-badge" id="newsStats">Зареждане...</span>
       </div>
       <div class="header-right">
-        <button id="refreshNewsBtn" class="refresh-btn" title="Обнови емисията">
-          ↻ ОБНОВИ
+        <button id="refreshNewsBtn" class="refresh-btn" title="Обнови емисията" aria-label="Обнови">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -27,11 +28,6 @@ export async function initMapPanel(container) {
     <div class="map-side-by-side">
       <div class="map-container-wrapper">
         <div class="map-container" id="leafletMap"></div>
-        <div class="map-legend">
-          <span class="legend-item"><span class="legend-dot cyan"></span> Локация / Град</span>
-          <span class="legend-item"><span class="legend-dot red"></span> 💀 Критично / Инцидент</span>
-          <span class="legend-item"><span class="legend-tag">№</span> Брой новини в клъстера</span>
-        </div>
       </div>
 
       <div class="news-feed">
@@ -86,11 +82,13 @@ export async function initMapPanel(container) {
     const refreshBtn = document.getElementById('refreshNewsBtn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
-        refreshBtn.classList.add('rotating');
+        refreshBtn.disabled = true;
+        refreshBtn.style.opacity = '0.5';
         const newsList = document.getElementById('newsList');
         if (newsList) newsList.innerHTML = renderSkeletons();
         loadNews(true).finally(() => {
-          refreshBtn.classList.remove('rotating');
+          refreshBtn.disabled = false;
+          refreshBtn.style.opacity = '1';
         });
       });
     }

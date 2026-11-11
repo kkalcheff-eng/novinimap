@@ -819,38 +819,30 @@ body {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
-  padding: 6px 14px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 }
 
 .refresh-btn:hover {
-  background: #00e5ff;
-  color: #000;
+  background: rgba(0, 229, 255, 0.15);
+  color: #00e5ff;
   border-color: #00e5ff;
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
 }
 
-.refresh-btn.rotating {
-  animation: spin 1s linear infinite;
-  pointer-events: none;
-  opacity: 0.7;
+.refresh-btn:active {
+  background: rgba(0, 229, 255, 0.3);
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .map-side-by-side {
@@ -2419,13 +2411,34 @@ td {
   }
 
   /* Hide requested clutter elements on mobile */
-  .map-panel-header,
   .map-legend,
   .leaflet-control-zoom,
-  .news-feed-controls,
+  .news-feed-controls {
+    display: none !important;
+  }
+
+  .map-panel-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 6px 14px !important;
+    background: #0a0a0a !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    box-sizing: border-box !important;
+    z-index: 10 !important;
+    flex: none !important;
+  }
+
   #refreshNewsBtn,
   .refresh-btn {
-    display: none !important;
+    display: inline-flex !important;
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   /* Make map tab and container fit full mobile viewport seamlessly */
@@ -2447,14 +2460,16 @@ td {
 
   .map-side-by-side {
     flex-direction: column !important;
-    height: 100% !important;
+    flex: 1 !important;
+    height: calc(100% - 38px) !important;
+    min-height: 0 !important;
   }
 
   .map-container-wrapper {
     flex: none !important;
-    height: 44% !important;
-    height: 44dvh !important;
-    min-height: 220px;
+    height: 42% !important;
+    height: 42dvh !important;
+    min-height: 180px;
     border-right: none !important;
     border-bottom: 1px solid var(--border-color);
   }
@@ -2465,8 +2480,8 @@ td {
 
   .news-feed {
     flex: 1 !important;
-    height: 56% !important;
-    height: 56dvh !important;
+    height: auto !important;
+    min-height: 0 !important;
     border-left: none !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
