@@ -443,8 +443,8 @@ export const isLethalTitle = (title = '') =>
 
 export class NewsMapService {
   constructor() {
-    // Use a new key so old, stale v4/v5 data cannot be reused.
-    this.cacheKey = 'kalchev_news_agg_v6';
+    // Use a new key so old, stale v4/v5/v6 data cannot be reused.
+    this.cacheKey = 'kalchev_news_agg_v7';
     this.ttl = 5 * 60 * 1000;
 
     // Remove obsolete cache entries automatically.
@@ -452,6 +452,7 @@ export class NewsMapService {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.removeItem('kalchev_news_agg_v4');
         localStorage.removeItem('kalchev_news_agg_v5');
+        localStorage.removeItem('kalchev_news_agg_v6');
       }
     } catch (error) {
       console.warn(
@@ -475,7 +476,7 @@ export class NewsMapService {
             Array.isArray(data) &&
             data.length > 0
           ) {
-            return data;
+            return this.sanitizeArticles(data);
           }
         }
       }
@@ -511,6 +512,45 @@ export class NewsMapService {
         error
       );
     }
+  }
+
+  sanitizeArticles(items) {
+    if (!Array.isArray(items)) return [];
+    items.forEach((item) => {
+      // 1. Sanitize lethal flag: if text contains no lethal incident keywords, clear false flag
+      if (item.isLethal) {
+        const hasLethal =
+          isLethalTitle(item.title) || isLethalTitle(item.summary || '');
+        if (!hasLethal) {
+          item.isLethal = false;
+        }
+      }
+
+      // 2. Sanitize location: if cached location was deleted from CITY_DB (e.g. Красимир, Калоян, Боряна, Слънчево)
+      const locKey = (item.location?.name || '').toLowerCase();
+      if (item.location && !CITY_DB[locKey]) {
+        const fullText = `${item.title} ${item.summary || ''}`.toLowerCase();
+        const match = this.matchCity(fullText);
+        item.location = match
+          ? { name: match.name, coords: { lat: match.lat, lng: match.lng } }
+          : null;
+      }
+
+      // 3. Re-match city if link was # (fixes old poisoned varnautre cache)
+      if (item.link === '#' || !item.link) {
+        const fullText = `${item.title} ${item.summary || ''}`.toLowerCase();
+        const match = this.matchCity(fullText);
+        item.location = match
+          ? { name: match.name, coords: { lat: match.lat, lng: match.lng } }
+          : null;
+      }
+
+      // 4. Restore real link if url field is available
+      if ((!item.link || item.link === '#') && item.url) {
+        item.link = item.url;
+      }
+    });
+    return items;
   }
 
   async fetchTrendingNews(force = false, onProgress = null) {
@@ -556,6 +596,7 @@ export class NewsMapService {
         `[NewsMapService] Loaded ${items.length} items from live backend`
       );
 
+      this.sanitizeArticles(items);
       this.setCache(items);
 
       if (onProgress) onProgress(100);

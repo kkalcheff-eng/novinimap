@@ -543,16 +543,21 @@ class IngestionWorker {
     // 1. Check article geolocation cache (keyed by link or GUID)
     const cachedGeo = canCache ? await cache.getArticleGeo(articleKey) : null;
     if (cachedGeo) {
-      const pubDate = new Date(item.publishedAt);
-      const existing = this.articlesStore.get(item.id);
-      return {
-        ...item,
-        firstSeenAt: existing?.firstSeenAt || fetchedAt,
-        location: cachedGeo.location,
-        isLethal: cachedGeo.isLethal,
-        timestamp: pubDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        dateStr: pubDate.toLocaleDateString('bg-BG', { day: 'numeric', month: 'short' })
-      };
+      const locKey = (cachedGeo.location?.name || '').toLowerCase();
+      const isValidLoc = !cachedGeo.location || Boolean(CITY_DB[locKey]);
+
+      if (isValidLoc) {
+        const pubDate = new Date(item.publishedAt);
+        const existing = this.articlesStore.get(item.id);
+        return {
+          ...item,
+          firstSeenAt: existing?.firstSeenAt || fetchedAt,
+          location: cachedGeo.location,
+          isLethal: cachedGeo.isLethal,
+          timestamp: pubDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          dateStr: pubDate.toLocaleDateString('bg-BG', { day: 'numeric', month: 'short' })
+        };
+      }
     }
 
     const fullText = `${item.title} ${item.summary}`.toLowerCase();
